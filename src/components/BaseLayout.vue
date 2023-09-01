@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-app-bar>
-      <v-toolbar-title>Bellringer Text Alerts</v-toolbar-title>
+      <v-toolbar-title style="margin-left: 1em;"><router-link to="/" style="color:black;text-decoration: none;">Bellringer Text Alerts</router-link></v-toolbar-title>
       <div>
         Logged in as {{ userData.name }}
       </div>

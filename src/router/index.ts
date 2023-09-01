@@ -25,6 +25,12 @@ const routes = [
         meta: { requiresAuth: false },
         component: () => import(/* webpackChunkName: "logged-out" */ '@/views/Logout.vue'),
       },
+      {
+        path: '/privacy-policy',
+        name: 'Privacy Policy',
+        meta: { requiresAuth: false },
+        component: () => import(/* webpackChunkName: "privacy-policy" */ '@/views/ToS.vue'),
+      },
     ],
   },
 ]
