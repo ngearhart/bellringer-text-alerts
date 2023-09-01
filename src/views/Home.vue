@@ -22,6 +22,7 @@
                 <v-row>
                   <v-col>
                     <v-select
+                      v-model="interval"
                       :disabled="loading"
                       label="Update Interval"
                       :items="intervals"
@@ -31,7 +32,13 @@
                 </v-row>
                 <v-row>
                   <v-col>
-                    <v-checkbox :disabled="loading" :rules="checkboxRules">
+                    <v-checkbox
+                      :disabled="loading || signedUp"
+                      :rules="checkboxRules"
+                      v-model="checked"
+                      :persistent-hint="signedUp"
+                      :hint="signedUp ? 'To disagree with the terms and conditions, you must unsubscribe.' : ''"
+                    >
                       <template v-slot:label>
                         <v-dialog
                           v-model="termsDialog"
@@ -81,8 +88,13 @@
                 </v-row>
               </v-container>
             </v-card-text>
-            <v-card-actions>
-              <v-btn type="submit" block class="mt-2" :disabled="loading" :loading="loading">Sign Up</v-btn>
+            <v-card-actions style="display: flex; justify-content: center;">
+              <v-btn v-if="signedUp" class="mt-2" :disabled="loading" :loading="loading" @click="unsubscribe">
+                Unsubscribe
+              </v-btn>
+              <v-btn type="submit" class="mt-2" :disabled="loading" :loading="loading">
+                {{ signedUp ? 'Save Changes' : 'Sign Up' }}
+              </v-btn>
             </v-card-actions>
           </v-form>
         </v-card>
@@ -94,9 +106,21 @@
 
 <script lang="ts" setup>
 import BaseLayout from '@/components/BaseLayout.vue'
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { Result } from 'maz-ui/components/MazPhoneNumberInput'
 import { reactive } from 'vue';
+import { getCurrentUser, useDatabaseObject } from 'vuefire'
+import { ref as dbRef, getDatabase, set, remove } from 'firebase/database'
+import { watch } from 'vue';
+import { computed } from 'vue';
+
+
+type TextAlertUser = {
+  phone: string
+  interval: number,
+  displayName: string,
+  email: string
+}
 
 const intervals = reactive([
   {
@@ -145,7 +169,7 @@ const checkboxRules = [
 const termsDialog = ref(false)
 const loading = ref(false)
 const signupForm = ref<{validate: () => Promise<{valid: boolean}>}| null>(null)
-
+const interval = ref<number | null>(null)
 const phone = ref("")
 const phoneResult = ref<Result>()
 const phoneError = ref(false);
@@ -154,9 +178,54 @@ const signUp = async() => {
   const result = await signupForm.value?.validate()
   if (result?.valid && phoneResult.value?.isValid) {
     loading.value = true
+
+    const newItem: TextAlertUser = {
+      phone: phone.value,
+      interval: interval.value || 1,
+      displayName: displayName.value,
+      email: email.value
+    }
+    set(currentDataSource.value, newItem)
+
+    loading.value = false
   } else if (!phoneResult.value?.isValid) {
     phoneError.value = true
   }
+}
+
+const uid = ref('')
+const displayName = ref('')
+const email = ref('')
+const signedUp = ref(false)
+const checked = ref(false)
+
+// Load existing database
+const currentDataSource = computed(() => dbRef(getDatabase(), 'users/' + uid.value))
+const currentData = useDatabaseObject<TextAlertUser | null>(currentDataSource)
+
+watch(currentData, async(newData, oldData) => {
+  if (newData) {
+    signedUp.value = true
+    phone.value = currentData.value?.phone || ''
+    interval.value = currentData.value?.interval || 1
+    checked.value = true
+  } else {
+    signedUp.value = false
+    phone.value = ''
+    interval.value = null
+    checked.value = false
+  }
+})
+
+onMounted(async () => {
+  const currentUser = await getCurrentUser();
+  uid.value = currentUser?.uid || '';
+  email.value = currentUser?.email || '';
+  displayName.value = currentUser?.displayName || '';
+});
+
+const unsubscribe = () => {
+  remove(currentDataSource.value)
 }
 
 </script>
