@@ -3,29 +3,35 @@
     <v-row align="center" justify="center">
       <v-col cols="12" sm="8">
         <v-card title="Sign Up for Text Alerts" style="overflow: initial; z-index: initial">
-          <v-form @submit.prevent>
+          <v-form @submit.prevent="signUp" ref="signupForm">
             <v-card-text>
               <v-container>
                 <v-row>
                   <v-col>
                     <MazPhoneNumberInput
+                      v-model="phone"
                       show-code-on-list
                       color="info"
                       :preferred-countries="['US']"
+                      :disabled="loading"
+                      @update="phoneError = false; phoneResult = $event"
+                      :error="phoneError"
                     />
                   </v-col>
                 </v-row>
                 <v-row>
                   <v-col>
                     <v-select
+                      :disabled="loading"
                       label="Update Interval"
                       :items="intervals"
+                      :rules="intervalRules"
                     ></v-select>
                   </v-col>
                 </v-row>
                 <v-row>
                   <v-col>
-                    <v-checkbox>
+                    <v-checkbox :disabled="loading" :rules="checkboxRules">
                       <template v-slot:label>
                         <v-dialog
                           v-model="termsDialog"
@@ -44,7 +50,7 @@
                                     Noah Gearhart is personally providing this service "AS-IS" and makes no guarantees for uptime, service level agreement, or accuracy. Use at your own risk.
                                   </li>
                                   <li>
-                                    Noah Gearhart personally funds this project, so your service may be terminated at any time for any reason.
+                                    Noah Gearhart personally funds this project, so your service may be terminated at any time for any reason .
                                   </li>
                                   <li>
                                     You can cancel the SMS service at any time. Just text "STOP" to the number. After you send the SMS message "STOP" to us, we will send you an SMS message to confirm that you have been unsubscribed. After this, you will no longer receive SMS messages from us. If you want to join again, just sign up as you did the first time and we will start sending SMS messages to you again.
@@ -76,7 +82,7 @@
               </v-container>
             </v-card-text>
             <v-card-actions>
-              <v-btn type="submit" block class="mt-2">Sign Up</v-btn>
+              <v-btn type="submit" block class="mt-2" :disabled="loading" :loading="loading">Sign Up</v-btn>
             </v-card-actions>
           </v-form>
         </v-card>
@@ -89,6 +95,7 @@
 <script lang="ts" setup>
 import BaseLayout from '@/components/BaseLayout.vue'
 import { ref } from 'vue';
+import { Result } from 'maz-ui/components/MazPhoneNumberInput'
 import { reactive } from 'vue';
 
 const intervals = reactive([
@@ -118,6 +125,38 @@ const intervals = reactive([
   },
 ])
 
+const intervalRules = [
+  (value: string) => {
+    if (value) return true
+
+    return 'Please choose an interval'
+  },
+]
+
+const checkboxRules = [
+  (value: boolean) => {
+    if (value) return true
+
+    return 'You must agree to the terms and conditions'
+  },
+]
+
+
 const termsDialog = ref(false)
+const loading = ref(false)
+const signupForm = ref<{validate: () => Promise<{valid: boolean}>}| null>(null)
+
+const phone = ref("")
+const phoneResult = ref<Result>()
+const phoneError = ref(false);
+
+const signUp = async() => {
+  const result = await signupForm.value?.validate()
+  if (result?.valid && phoneResult.value?.isValid) {
+    loading.value = true
+  } else if (!phoneResult.value?.isValid) {
+    phoneError.value = true
+  }
+}
 
 </script>
