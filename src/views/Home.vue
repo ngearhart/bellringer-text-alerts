@@ -2,10 +2,15 @@
   <base-layout>
     <v-row align="center" justify="center">
       <v-col cols="12" sm="8">
-        <v-card title="Sign Up for Text Alerts" style="overflow: initial; z-index: initial">
+        <v-card title="Sign Up for Rider Updates" style="overflow: initial; z-index: initial">
           <v-form @submit.prevent="signUp" ref="signupForm">
             <v-card-text>
               <v-container>
+                <v-row v-if="total?.$value && total?.$value > 10">
+                  <v-col>
+                    <i>Warning: Potentially too many people have signed up. You may not receive service.</i>
+                  </v-col>
+                </v-row>
                 <v-row>
                   <v-col>
                     <MazPhoneNumberInput
@@ -113,6 +118,7 @@ import { getCurrentUser, useDatabaseObject } from 'vuefire'
 import { ref as dbRef, getDatabase, set, remove } from 'firebase/database'
 import { watch } from 'vue';
 import { computed } from 'vue';
+import { notify } from '@kyvg/vue3-notification'
 
 
 type TextAlertUser = {
@@ -185,9 +191,13 @@ const signUp = async() => {
       displayName: displayName.value,
       email: email.value
     }
-    set(currentDataSource.value, newItem)
+    await set(currentDataSource.value, newItem)
 
     loading.value = false
+    notify({
+      'title': 'Success',
+      'text': 'Settings saved.'
+    })
   } else if (!phoneResult.value?.isValid) {
     phoneError.value = true
   }
@@ -202,6 +212,8 @@ const checked = ref(false)
 // Load existing database
 const currentDataSource = computed(() => dbRef(getDatabase(), 'users/' + uid.value))
 const currentData = useDatabaseObject<TextAlertUser | null>(currentDataSource)
+
+const total = useDatabaseObject<{ $value: number, id: string } | null>(dbRef(getDatabase(), 'total'))
 
 watch(currentData, async(newData, oldData) => {
   if (newData) {
@@ -224,8 +236,14 @@ onMounted(async () => {
   displayName.value = currentUser?.displayName || '';
 });
 
-const unsubscribe = () => {
-  remove(currentDataSource.value)
+const unsubscribe = async () => {
+  loading.value = true
+  await remove(currentDataSource.value)
+  notify({
+    'title': 'Success',
+    'text': 'You have unsubscribed from text alerts.'
+  })
+  loading.value = false
 }
 
 </script>
