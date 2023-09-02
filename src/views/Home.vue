@@ -38,6 +38,17 @@
                 <v-row>
                   <v-col>
                     <v-checkbox
+                      :disabled="loading"
+                      v-model="sendReductionAlerts"
+                      :persistent-hint="true"
+                      label="Send alerts for rider count decreases"
+                      hint="By default, you will only receive messages when the rider count increases."
+                    ></v-checkbox>
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col>
+                    <v-checkbox
                       :disabled="loading || signedUp"
                       :rules="checkboxRules"
                       v-model="checked"
@@ -125,7 +136,8 @@ type TextAlertUser = {
   phone: string
   interval: number,
   displayName: string,
-  email: string
+  email: string,
+  sendReductionAlert: boolean
 }
 
 const intervals = reactive([
@@ -189,7 +201,8 @@ const signUp = async() => {
       phone: phone.value,
       interval: interval.value || 1,
       displayName: displayName.value,
-      email: email.value
+      email: email.value,
+      sendReductionAlert: sendReductionAlerts.value
     }
     await set(currentDataSource.value, newItem)
 
@@ -208,6 +221,7 @@ const displayName = ref('')
 const email = ref('')
 const signedUp = ref(false)
 const checked = ref(false)
+const sendReductionAlerts = ref(false)
 
 // Load existing database
 const currentDataSource = computed(() => dbRef(getDatabase(), 'users/' + uid.value))
@@ -220,12 +234,14 @@ watch(currentData, async(newData, oldData) => {
     signedUp.value = true
     phone.value = currentData.value?.phone || ''
     interval.value = currentData.value?.interval || 1
+    sendReductionAlerts.value = currentData.value?.sendReductionAlert || false
     checked.value = true
   } else {
     signedUp.value = false
     phone.value = ''
     interval.value = null
     checked.value = false
+    sendReductionAlerts.value = false
   }
 })
 
